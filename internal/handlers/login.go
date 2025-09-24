@@ -21,13 +21,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-var users = map[string]struct {
-	Role string
-}{
-	"naveen": {Role: "admin"},
-	"mayank": {Role: "worker"},
-}
-
 func login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -74,7 +67,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	resp := LoginResponse{
 		Token: tokenString,
-		Role:  users[req.Username].Role,
+		Role:  role,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
