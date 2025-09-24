@@ -10,8 +10,6 @@ import (
 )
 
 func main() {
-	// var s string = "hello how are yoyu"
-	// handlers.Printer(s)
 
 	var r *chi.Mux = chi.NewRouter()
 	handlers.Handlers(r)
