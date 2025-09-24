@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var jwtKey = []byte("my_secret_key")
@@ -33,7 +34,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "username and password are required", http.StatusBadRequest)
 		return
 	}
-	// Connect to DB
+
 	db, err := getDB()
 	if err != nil {
 		http.Error(w, "DB connection error: "+err.Error(), http.StatusInternalServerError)
@@ -49,7 +50,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Password != storedPassword {
+	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password)); err != nil {
 		http.Error(w, "invalid username or password", http.StatusUnauthorized)
 		return
 	}

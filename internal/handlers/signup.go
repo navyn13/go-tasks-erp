@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -45,7 +47,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "username, password, and role are required", http.StatusBadRequest)
 		return
 	}
-
+	password_hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	// Connect to DB
 	db, err := getDB()
 	if err != nil {
@@ -57,7 +59,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	// Insert user into users table
 	_, err = db.Exec(
 		"INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-		req.Username, req.Password, req.Role,
+		req.Username, password_hash, req.Role,
 	)
 	if err != nil {
 		http.Error(w, "DB insert error: "+err.Error(), http.StatusInternalServerError)
