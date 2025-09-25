@@ -10,7 +10,7 @@ import (
 )
 
 func EmployeeOnly(next http.Handler) http.Handler {
-	fmt.Println("EmployeeOnly triggered")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authTokenString := r.Header.Get("authTokenString")
 		if authTokenString == "" {

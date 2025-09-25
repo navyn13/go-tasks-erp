@@ -12,7 +12,7 @@ import (
 var jwtKey = []byte("my_secret_key")
 
 func AdminOnly(next http.Handler) http.Handler {
-	fmt.Println("AdminOnly triggered")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authTokenString := r.Header.Get("authTokenString")
 		if authTokenString == "" {
