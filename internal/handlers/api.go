@@ -1,17 +1,12 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	chimiddle "github.com/go-chi/chi/v5/middleware"
 	"github.com/navyn13/go-tasks-erp/internal/middleware"
 )
-
-func Printer(s string) {
-	fmt.Println(s)
-}
 
 func Handlers(r *chi.Mux) {
 	r.Use(chimiddle.StripSlashes)
@@ -25,7 +20,10 @@ func Handlers(r *chi.Mux) {
 	r.Route("/admin", func(router chi.Router) {
 		router.Use(middleware.AdminOnly)
 		router.Post("/jobs", createjob)
-
+	})
+	r.Route("/employee", func(router chi.Router) {
+		router.Use(middleware.EmployeeOnly)
+		router.Get("/jobs", getAllJobsForEmployee)
 	})
 
 }
