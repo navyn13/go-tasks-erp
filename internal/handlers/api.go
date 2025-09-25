@@ -18,14 +18,19 @@ func Handlers(r *chi.Mux) {
 	r.Post("/login", login)
 
 	r.Route("/admin", func(router chi.Router) {
-		router.Use(middleware.AdminOnly)
-		router.Get("/jobs", getAllJobs)
-		router.Post("/jobs", createjob)
+		router.Use(middleware.AdminOnly)       // admin ke liye routes
+		router.Get("/jobs", getAllJobs)        // get all jobs jitni bhi hae
+		router.Get("/jobStatus", getJobStatus) // get job status for admin
+		router.Post("/jobs", createjob)        // create a job
+		router.Put("/jobs", updateJob)         // update a job
+		router.Delete("/jobs", deletejob)      // delete a job
+
 	})
 	r.Route("/employee", func(router chi.Router) {
-		router.Use(middleware.EmployeeOnly)
-		router.Get("/jobs", getAllJobs)
-		router.Put("/updatejobstatus", updateJobStatus)
+		router.Use(middleware.EmployeeOnly)             // employee routes
+		router.Get("/jobs", getAllJobs)                 // get all jobs for employee
+		router.Get("/jobstatus", getJobStatus)          // get job status for employee
+		router.Put("/updatejobstatus", updateJobStatus) // update job status for employee
 	})
 
 }
