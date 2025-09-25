@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"context"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -32,13 +34,19 @@ func AdminOnly(next http.Handler) http.Handler {
 				fmt.Println("Role not found")
 				return
 			}
-			fmt.Println("User role:", role)
 			if role != "admin" {
 				http.Error(w, "Only Admins can access", http.StatusForbidden)
 				return
 			}
 		}
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), "role", claims["role"])
+		username, ok := claims["username"].(string)
+		if ok {
+			ctx = context.WithValue(ctx, "username", username)
+		}
+		fmt.Println("context has been set with username:", username)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 
 	})
 }

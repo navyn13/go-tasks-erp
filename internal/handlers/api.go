@@ -24,7 +24,7 @@ func Handlers(r *chi.Mux) {
 
 	r.Route("/admin", func(router chi.Router) {
 		router.Use(middleware.AdminOnly)
-		router.Get("/jobs", createjob)
+		router.Post("/jobs", createjob)
 
 	})
 

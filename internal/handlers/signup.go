@@ -56,7 +56,6 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	// Insert user into users table
 	_, err = db.Exec(
 		"INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
 		req.Username, password_hash, req.Role,
