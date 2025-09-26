@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/navyn13/go-tasks-erp/internal/db"
@@ -26,7 +27,6 @@ func UpdateJobStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Also validate other fields after decoding
 	if req.JobID == 0 {
 		http.Error(w, "Invalid request: job_id is required", http.StatusBadRequest)
 		return
@@ -40,17 +40,22 @@ func UpdateJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dbConn.Close()
 
-	fmt.Println(req.Status)
-	fmt.Println(req.Process)
-	fmt.Println(req.JobID)
+	query := "UPDATE jobStatus js JOIN jobs j ON js.jobid = j.id SET js.status = ?"
+	args := []interface{}{req.Status}
 
-	res, err := dbConn.Exec(`
-	UPDATE jobStatus js
-	JOIN jobs j ON js.jobid = j.id
-	SET js.status = ?
-	WHERE js.jobid = ? AND js.process_name = ? AND j.employee_id = ?`,
-		req.Status, req.JobID, req.Process, userID,
-	)
+	if req.Status == "in-progress" {
+		query += ", js.started_at = ?"
+		args = append(args, time.Now())
+	} else if req.Status == "completed" {
+		query += ", js.completed_at = ?"
+		args = append(args, time.Now())
+	}
+
+	query += " WHERE js.jobid = ? AND js.process_name = ? AND j.employee_id = ?"
+	args = append(args, req.JobID, req.Process, userID)
+
+	res, err := dbConn.Exec(query, args...)
+
 	if err != nil {
 		http.Error(w, "DB update error: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -48,6 +48,7 @@ func UpdateJob(w http.ResponseWriter, r *http.Request) {
 
 	result, err := dbConn.Exec("UPDATE jobs SET title = ?, description = ?, employee_id = ? WHERE id = ?",
 		req.Title, req.Description, userID, req.JobID)
+
 	if err != nil {
 		http.Error(w, "Unable to update job: "+err.Error(), http.StatusInternalServerError)
 		return
