@@ -32,7 +32,7 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("userid: ", userId)
 	fmt.Println("role: ", role)
 
-	var req jobsSchema.GetJobStatusRequest
+	var req jobsSchema.GetJobProcessStatusRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
@@ -46,25 +46,25 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dbConn.Close()
 
-	var jobStatus jobsSchema.GetJobStatusResponse
+	var jobStatus jobsSchema.GetJobProcessStatusResponse
 	var row *sql.Row
 	if role == "admin" {
 		row = dbConn.QueryRow(
-			"SELECT job_id, cutting, welding, quality_check, packaging, dispatch FROM jobStatus WHERE job_id = ?",
-			req.JobID)
+			"SELECT jobid, process_name, status, started_at, completed_at FROM jobStatus WHERE jobid = ? AND process_name = ?",
+			req.JobID, req.Process)
 	} else if role == "employee" {
 		updateProcessQuery := `
-		SELECT js.job_id, js.cutting, js.welding, js.quality_check, js.packaging, js.dispatch
+		SELECT js.jobid, js.process_name, js.status, js.started_at, js.completed_at
 		FROM jobStatus js
-		JOIN jobs j ON j.id = js.job_id
-		WHERE js.job_id = ? AND j.employee_id = ?`
+		JOIN jobs j ON j.id = js.jobid
+		WHERE js.jobid = ? AND j.employee_id = ?`
 
 		row = dbConn.QueryRow(updateProcessQuery, req.JobID, userId)
 	} else {
 		http.Error(w, "Invalid role", http.StatusForbidden)
 		return
 	}
-	err = row.Scan(&jobStatus.JobID, &jobStatus.Cutting, &jobStatus.Welding, &jobStatus.QualityCheck, &jobStatus.Packaging, &jobStatus.Dispatch)
+	err = row.Scan(&jobStatus.JobID, &jobStatus.Process, &jobStatus.Status, &jobStatus.StartedAt, &jobStatus.CompletedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 

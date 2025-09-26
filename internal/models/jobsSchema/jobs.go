@@ -29,16 +29,17 @@ type Job struct {
 	CreatedByID int    `json:"created_by_id"`
 }
 
-type GetJobStatusResponse struct {
-	JobID        int    `json:"job_id"`
-	Cutting      string `json:"cutting"`
-	Welding      string `json:"welding"`
-	QualityCheck string `json:"quality_check"`
-	Packaging    string `json:"packaging"`
-	Dispatch     string `json:"dispatch"`
+type GetJobProcessStatusResponse struct {
+	JobID       int     `json:"job_id"`
+	Process     string  `json:"process"`
+	Status      string  `json:"status"`
+	StartedAt   *string `json:"started_at,omitempty"`
+	CompletedAt *string `json:"completed_at,omitempty"`
 }
-type GetJobStatusRequest struct {
-	JobID int `json:"job_id"`
+
+type GetJobProcessStatusRequest struct {
+	JobID   int    `json:"job_id"`
+	Process string `json:"process"`
 }
 
 type UpdateJobRequest struct {

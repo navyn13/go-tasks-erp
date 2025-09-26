@@ -19,7 +19,7 @@ func DeleteJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.JobID == 0 {
-		http.Error(w, "JobID is required", http.StatusBadRequest)
+		http.Error(w, "JobID is required", http.StatusForbidden)
 		return
 	}
 
@@ -37,7 +37,7 @@ func DeleteJob(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec("DELETE FROM jobStatus WHERE job_id = ?", req.JobID)
+	_, err = tx.Exec("DELETE FROM jobStatus WHERE jobid = ?", req.JobID)
 	if err != nil {
 		http.Error(w, "JobStatus delete error: "+err.Error(), http.StatusInternalServerError)
 		return

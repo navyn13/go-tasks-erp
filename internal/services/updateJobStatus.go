@@ -13,38 +13,16 @@ import (
 func UpdateJobStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("--------Updating Job Status--------")
 
-	// FIX 1: Safely get user ID from context to prevent panic.
 	userID, ok := r.Context().Value("id").(int)
 	if !ok {
 		http.Error(w, "Invalid or missing user ID in context", http.StatusUnauthorized)
 		return
 	}
 
-	// Decode request body first
 	var req jobsSchema.UpdateJobStatusRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var process string
-
-	switch req.Process {
-	case "cutting", "welding", "quality_check", "packaging", "dispatch":
-		process = req.Process
-	default:
-		// If req.Process is not one of the allowed values, it's an invalid request.
-		http.Error(w, "Invalid process name in request body", http.StatusBadRequest)
-		return
-	}
-
-	switch req.Status {
-	case "pending", "in-progress", "completed", "failed":
-
-	default:
-		// If req.Process is not one of the allowed values, it's an invalid request.
-		http.Error(w, "Invalid Status given in request body", http.StatusBadRequest)
 		return
 	}
 
@@ -62,14 +40,17 @@ func UpdateJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dbConn.Close()
 
-	// Build the query safely using the validated column name
-	updateProcessQuery := fmt.Sprintf(`
-		UPDATE jobStatus js
-		JOIN jobs j ON j.id = js.job_id
-		SET js.%s = ?
-		WHERE js.job_id = ? AND j.employee_id = ?`, process)
+	fmt.Println(req.Status)
+	fmt.Println(req.Process)
+	fmt.Println(req.JobID)
 
-	res, err := dbConn.Exec(updateProcessQuery, req.Status, req.JobID, userID)
+	res, err := dbConn.Exec(`
+	UPDATE jobStatus js
+	JOIN jobs j ON js.jobid = j.id
+	SET js.status = ?
+	WHERE js.jobid = ? AND js.process_name = ? AND j.employee_id = ?`,
+		req.Status, req.JobID, req.Process, userID,
+	)
 	if err != nil {
 		http.Error(w, "DB update error: "+err.Error(), http.StatusInternalServerError)
 		return
