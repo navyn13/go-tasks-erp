@@ -15,7 +15,7 @@ func main() {
 	handlers.Handlers(r)
 
 	fmt.Println("STARTING GO-TASKS-ERP API SERVICES")
-	err := http.ListenAndServe("localhost:8000", r)
+	err := http.ListenAndServe(":8000", r)
 	if err != nil {
 		log.Error(err)
 	}

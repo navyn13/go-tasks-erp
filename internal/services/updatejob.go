@@ -35,6 +35,17 @@ func UpdateJob(w http.ResponseWriter, r *http.Request) {
 	}
 	defer dbConn.Close()
 
+	var adminCount int
+	err = dbConn.QueryRow("SELECT COUNT(*) FROM users WHERE id = ? AND role = 'admin'", req.EmployeeID).Scan(&adminCount)
+	if err != nil {
+		http.Error(w, "DB connection error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if adminCount > 0 {
+		http.Error(w, "Cannot assign a job to an admin user", http.StatusForbidden)
+		return
+	}
+
 	result, err := dbConn.Exec("UPDATE jobs SET title = ?, description = ?, employee_id = ? WHERE id = ?",
 		req.Title, req.Description, userID, req.JobID)
 	if err != nil {

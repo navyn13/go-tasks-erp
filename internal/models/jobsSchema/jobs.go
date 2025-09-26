@@ -44,6 +44,7 @@ type GetJobStatusRequest struct {
 type UpdateJobRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	EmployeeID  int    `json:"employee_id"`
 	JobID       int    `json:"job_id"`
 }
 type UpdateJobResponse struct {

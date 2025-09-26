@@ -35,6 +35,16 @@ func CreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer db.Close()
+	var adminCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE id = ? AND role = 'admin'", req.EmployeeID).Scan(&adminCount)
+	if err != nil {
+		http.Error(w, "DB connection error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if adminCount > 0 {
+		http.Error(w, "Cannot assign a job to an admin user", http.StatusForbidden)
+		return
+	}
 
 	result, err := db.Exec(
 		"INSERT INTO jobs (title, description, employee_id, created_by_id) VALUES (?, ?, ?, ?)",
