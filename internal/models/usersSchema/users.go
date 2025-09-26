@@ -3,8 +3,6 @@ package usersSchema
 // LoginRequest and LoginResponse structs
 type LoginResponse struct {
 	Token string `json:"token"`
-	Role  string `json:"role"`
-	Id    string `json:"id"`
 }
 
 type LoginRequest struct {

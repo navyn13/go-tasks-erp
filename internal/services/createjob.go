@@ -11,12 +11,11 @@ import (
 
 func CreateJob(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("--------Creating Job-------")
-	adminUsernameCtx := r.Context().Value("username")
-	if adminUsernameCtx == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	admin_username := adminUsernameCtx.(string)
+
+	// Get context and extract admin ID
+	adminCtx := r.Context()
+	adminID := adminCtx.Value("id")
+	fmt.Println(adminID)
 
 	var req jobsSchema.CreateJobRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -24,6 +23,7 @@ func CreateJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	if req.Title == "" || req.Description == "" || req.EmployeeID == 0 {
 
 		http.Error(w, "Title, Description and EmployeeID is required", http.StatusBadRequest)
@@ -35,15 +35,10 @@ func CreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer db.Close()
-	var admin_id int
-	err = db.QueryRow("SELECT id FROM users WHERE username = ? LIMIT 1", admin_username).Scan(&admin_id)
-	if err != nil {
-		http.Error(w, "invalid username or password", http.StatusUnauthorized)
-		return
-	}
+
 	result, err := db.Exec(
 		"INSERT INTO jobs (title, description, employee_id, created_by_id) VALUES (?, ?, ?, ?)",
-		req.Title, req.Description, req.EmployeeID, admin_id,
+		req.Title, req.Description, req.EmployeeID, adminID,
 	)
 	if err != nil {
 		http.Error(w, "DB insert error: "+err.Error(), http.StatusInternalServerError)

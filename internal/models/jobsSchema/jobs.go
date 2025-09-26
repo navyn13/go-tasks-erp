@@ -17,6 +17,9 @@ type DeleteJobResponse struct {
 }
 
 type GetAllJobsResponse struct {
+	Jobs []Job `json:"jobs"`
+}
+type Job struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -41,7 +44,6 @@ type GetJobStatusRequest struct {
 type UpdateJobRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	EmployeeID  int    `json:"employee_id"`
 	JobID       int    `json:"job_id"`
 }
 type UpdateJobResponse struct {

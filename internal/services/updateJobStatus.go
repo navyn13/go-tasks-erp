@@ -13,68 +13,82 @@ import (
 func UpdateJobStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("--------Updating Job Status--------")
 
-	// check username in context
-	employeeUsernameCtx := r.Context().Value("username")
-	if employeeUsernameCtx == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	employee_username := employeeUsernameCtx.(string)
-
-	// get db
-	db, err := db.GetDB()
-	if err != nil {
-		http.Error(w, "DB connection error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer db.Close()
-
-	// get employee id
-	var employee_id int
-	err = db.QueryRow("SELECT id FROM users WHERE username = ? LIMIT 1", employee_username).Scan(&employee_id)
-	if err != nil {
-		http.Error(w, "Invalid username", http.StatusUnauthorized)
+	// FIX 1: Safely get user ID from context to prevent panic.
+	userID, ok := r.Context().Value("id").(int)
+	if !ok {
+		http.Error(w, "Invalid or missing user ID in context", http.StatusUnauthorized)
 		return
 	}
 
-	// decode request body
+	// Decode request body first
 	var req jobsSchema.UpdateJobStatusRequest
-	allowedProcesses := map[string]bool{
-		"cutting":       true,
-		"welding":       true,
-		"quality_check": true,
-		"packaging":     true,
-		"dispatch":      true,
-	}
-	err = json.NewDecoder(r.Body).Decode(&req)
-	if err != nil || req.Process == "" || req.Status == "" || req.JobID == 0 || !allowedProcesses[req.Process] {
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
 		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// query with ownership check (employee must own the job)
+	var process string
+
+	switch req.Process {
+	case "cutting", "welding", "quality_check", "packaging", "dispatch":
+		process = req.Process
+	default:
+		// If req.Process is not one of the allowed values, it's an invalid request.
+		http.Error(w, "Invalid process name in request body", http.StatusBadRequest)
+		return
+	}
+
+	switch req.Status {
+	case "pending", "in-progress", "completed", "failed":
+
+	default:
+		// If req.Process is not one of the allowed values, it's an invalid request.
+		http.Error(w, "Invalid Status given in request body", http.StatusBadRequest)
+		return
+	}
+
+	// Also validate other fields after decoding
+	if req.JobID == 0 {
+		http.Error(w, "Invalid request: job_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get DB connection
+	dbConn, err := db.GetDB()
+	if err != nil {
+		http.Error(w, "DB connection error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer dbConn.Close()
+
+	// Build the query safely using the validated column name
 	updateProcessQuery := fmt.Sprintf(`
 		UPDATE jobStatus js
 		JOIN jobs j ON j.id = js.job_id
 		SET js.%s = ?
-		WHERE js.job_id = ? AND j.employee_id = ?`, req.Process)
+		WHERE js.job_id = ? AND j.employee_id = ?`, process)
 
-	res, err := db.Exec(updateProcessQuery, req.Status, req.JobID, employee_id)
+	res, err := dbConn.Exec(updateProcessQuery, req.Status, req.JobID, userID)
 	if err != nil {
 		http.Error(w, "DB update error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// check if any row was updated
-	rowsAffected, _ := res.RowsAffected()
-	if rowsAffected == 0 {
-		http.Error(w, "Not allowed: either job not found or not assigned to you", http.StatusForbidden)
+	// Check if any row was updated
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		http.Error(w, "Failed to check affected rows: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// response
+	if rowsAffected == 0 {
+		http.Error(w, "NO CHANGES MADE: either job is not assigned to you or process has that status before", http.StatusForbidden)
+		return
+	}
+
+	// Response
 	response := jobsSchema.UpdateJobStatusResponse{Message: "Job status updated successfully"}
-	fmt.Println(response)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }

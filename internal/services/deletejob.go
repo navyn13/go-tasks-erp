@@ -11,34 +11,52 @@ import (
 
 func DeleteJob(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("--------Deleting Job-------")
-	adminUsernameCtx := r.Context().Value("username")
-	adminRoleCtx := r.Context().Value("role")
-	if adminRoleCtx != "admin" {
-		http.Error(w, "Forbidden: Admins only", http.StatusForbidden)
-		return
-	}
-	if adminUsernameCtx == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
 
 	var req jobsSchema.DeleteJobRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	db, err := db.GetDB()
+	if req.JobID == 0 {
+		http.Error(w, "JobID is required", http.StatusBadRequest)
+		return
+	}
+
+	dbConn, err := db.GetDB()
 	if err != nil {
 		http.Error(w, "DB connection error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer db.Close()
-
-	_, err = db.Exec("DELETE FROM jobs WHERE id = ?", req.JobID)
+	defer dbConn.Close()
+	// transaction- if fails revert all
+	tx, err := dbConn.Begin()
 	if err != nil {
-		http.Error(w, "DB delete error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "DB transaction error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM jobStatus WHERE job_id = ?", req.JobID)
+	if err != nil {
+		http.Error(w, "JobStatus delete error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the job
+	result, err := tx.Exec("DELETE FROM jobs WHERE id = ?", req.JobID)
+	if err != nil {
+		http.Error(w, "Job delete error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "No job found with given ID", http.StatusNotFound)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "DB commit error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

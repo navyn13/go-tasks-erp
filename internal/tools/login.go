@@ -3,16 +3,17 @@ package tools
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/navyn13/go-tasks-erp/internal/db"
 	"github.com/navyn13/go-tasks-erp/internal/models/usersSchema"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/navyn13/go-tasks-erp/internal/utils"
 )
 
-var jwtKey = []byte("my_secret_key")
+var jwtKey = []byte(os.Getenv("JWTKEY"))
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var req usersSchema.LoginRequest
@@ -35,21 +36,23 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	//check for username and password check in user table in db
-	var storedPassword, role, user_id string
-	err = db.QueryRow("SELECT password, role, id FROM users WHERE username = ? LIMIT 1", req.Username).Scan(&storedPassword, &role, &user_id)
+	var storedPassword, role string
+	var userID int
+	err = db.QueryRow("SELECT password, role, id FROM users WHERE username = ? LIMIT 1", req.Username).Scan(&storedPassword, &role, &userID)
 	if err != nil {
 		http.Error(w, "invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password)); err != nil {
-		http.Error(w, "invalid username or password", http.StatusUnauthorized)
+	if isPasswordMatched := utils.CompareHashPassword(storedPassword, req.Password); !isPasswordMatched {
+		http.Error(w, "Password did not match", http.StatusForbidden)
 		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": req.Username,
 		"role":     role,
+		"id":       userID,
 		"exp":      time.Now().Add(time.Hour * 24).Unix(), // expires in 24h
 	})
 	tokenString, err := token.SignedString(jwtKey)
@@ -60,8 +63,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	response := usersSchema.LoginResponse{
 		Token: tokenString,
-		Role:  role,
-		Id:    user_id,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
